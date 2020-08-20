@@ -6,4 +6,4 @@ variables:
   ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
     targetBranchName: $[ variables['System.PullRequest.TargetBranch'] ]
   ${{ if ne(variables['Build.Reason'], 'PullRequest') }}:
-    targetBranchName: $[ variables['branchName'] ]
+    targetBranchName: $[ replace(variables['Build.SourceBranch'], 'refs/heads/', '') ]
