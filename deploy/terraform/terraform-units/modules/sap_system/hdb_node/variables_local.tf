@@ -94,11 +94,22 @@ locals {
   xsa                    = try(local.hdb.xsa, { routing = "ports" })
   shine                  = try(local.hdb.shine, { email = "shinedemo@microsoft.com" })
 
-  dbnodes = [for idx, dbnode in try(local.hdb.dbnodes, [{}]) : {
-    "name" = try(dbnode.name, format("%s_%s_hdb%02d", local.sap_sid, local.hdb_sid, idx)),
-    "role" = try(dbnode.role, "worker")
-    }
-  ]
+  sap_sid = try(var.application.sid, local.hdb_sid)
+
+  dbnodes = flatten([
+    [for idx, dbnode in try(local.hdb.dbnodes, [{}]) : {
+      "name" = try("${dbnode.name}-0", format("%sd%s%02dl%d", lower(local.sap_sid), lower(local.hdb_sid), idx, idx)),
+      "role" = try(dbnode.role, "worker")
+      }
+    ],
+    [for idx, dbnode in try(local.hdb.dbnodes, [{}]) : {
+      "name" = try("${dbnode.name}-1", format("%sd%s%02dl%d", lower(local.sap_sid), lower(local.hdb_sid), idx + length(local.hdb.dbnodes), idx + length(local.hdb.dbnodes))),
+      "role" = try(dbnode.role, "worker")
+      }
+      if local.hdb_ha
+    ]
+  ])
+
 
   loadbalancer = try(local.hdb.loadbalancer, {})
 
@@ -132,8 +143,6 @@ locals {
     { loadbalancer = local.loadbalancer }
   )
 
-  # SAP SID used in HDB resource naming convention
-  sap_sid = try(var.application.sid, "HN1")
 
 }
 
@@ -144,33 +153,18 @@ locals {
 
 locals {
   # Numerically indexed Hash of HANA DB nodes to be created
-  hdb_vms = flatten([
-    [
-      for dbnode in local.hana_database.dbnodes : {
-        platform       = local.hana_database.platform,
-        name           = "${dbnode.name}-0",
-        admin_nic_ip   = lookup(dbnode, "admin_nic_ips", [false, false])[0],
-        db_nic_ip      = lookup(dbnode, "db_nic_ips", [false, false])[0],
-        size           = local.hana_database.size,
-        os             = local.hana_database.os,
-        authentication = local.hana_database.authentication
-        sid            = local.hana_database.instance.sid
-      }
-    ],
-    [
-      for dbnode in local.hana_database.dbnodes : {
-        platform       = local.hana_database.platform,
-        name           = "${dbnode.name}-1",
-        admin_nic_ip   = lookup(dbnode, "admin_nic_ips", [false, false])[1],
-        db_nic_ip      = lookup(dbnode, "db_nic_ips", [false, false])[1],
-        size           = local.hana_database.size,
-        os             = local.hana_database.os,
-        authentication = local.hana_database.authentication
-        sid            = local.hana_database.instance.sid
-      }
-      if local.hana_database.high_availability
-    ]
-  ])
+  hdb_vms = [
+    for dbnode in local.hana_database.dbnodes : {
+      platform       = local.hana_database.platform,
+      name           = dbnode.name
+      admin_nic_ip   = lookup(dbnode, "admin_nic_ips", [false, false])[0],
+      db_nic_ip      = lookup(dbnode, "db_nic_ips", [false, false])[0],
+      size           = local.hana_database.size,
+      os             = local.hana_database.os,
+      authentication = local.hana_database.authentication
+      sid            = local.hana_database.instance.sid
+    }
+  ]
 
   # Ports used for specific HANA Versions
   lb_ports = {
