@@ -58,8 +58,9 @@ locals {
   location_short     = try(var.region_mapping[local.region], "unkn")
   vnet_mgmt_tempname = try(local.vnet_mgmt.name, "deployer")
   prefix             = try(var.infrastructure.resource_group.name, upper(format("%s-%s-%s", local.landscape, local.location_short, local.vnet_mgmt_tempname)))
-  sa_prefix          = lower(format("%s%s%sdiag", substr(local.landscape,0,5), local.location_short, substr(local.vnet_mgmt_tempname,0,7)))
-  rg_name            = try(var.infrastructure.resource_group.name,format("%s-INFRASTRUCTURE", local.prefix))
+  sa_prefix          = lower(format("%s%s%sdiag", substr(local.landscape, 0, 5), local.location_short, substr(local.vnet_mgmt_tempname, 0, 7)))
+  kv_prefix          = upper(format("%s%s%s", substr(local.landscape, 0, 5), local.location_short, substr(local.vnet_mgmt_tempname, 0, 7)))
+  rg_name            = try(var.infrastructure.resource_group.name, format("%s-INFRASTRUCTURE", local.prefix))
 
 
   // Management vnet
@@ -89,6 +90,15 @@ locals {
   // Deployer(s) information from input
   deployer_input = var.deployers
 
+  enable_key = contains(compact([
+    for deployer in local.deployer_input :
+    try(deployer.authentication.type, "key") == "key" ? true : false
+  ]), "true")
+
+  // By default use generated public key. Provide sshkey.path_to_public_key and path_to_private_key overides it
+  public_key  = local.enable_deployers && local.enable_key ? try(file(var.sshkey.path_to_public_key), tls_private_key.deployer[0].public_key_openssh) : null
+  private_key = local.enable_deployers && local.enable_key ? try(file(var.sshkey.path_to_private_key), tls_private_key.deployer[0].private_key_pem) : null
+
   // Deployer(s) information with default override
   enable_deployers = length(local.deployer_input) > 0 ? true : false
   deployers = [
@@ -108,7 +118,8 @@ locals {
         "type"     = "key",
         "username" = try(deployer.authentication.username, "azureadm"),
         "sshkey" = {
-          "path_to_private_key" = "~/.ssh/id_rsa"
+          "public_key"  = local.public_key
+          "private_key" = local.private_key
         }
       },
       "components" = [
