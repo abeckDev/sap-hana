@@ -51,3 +51,7 @@ output "user_vault_name" {
 output "ppk_name" {
   value = local.enable_deployers && local.enable_key ? azurerm_key_vault_secret.ppk[0].name : ""
 }
+
+output "pwd_name" {
+  value = local.enable_deployers && local.enable_password ? azurerm_key_vault_secret.pwd[0].name : ""
+}
