@@ -21,6 +21,20 @@
                     "prefix": "10.1.0.0/24"
                 }
             }
+        },
+        "iscsi": {
+            "iscsi_count": 3,
+            "size": "Standard_D2s_v3",
+            "os": {
+                "publisher": "SUSE",
+                "offer": "sles-sap-12-sp5",
+                "sku": "gen1",
+                "version": "latest"
+            },
+            "authentication": {
+                "type": "key",
+                "username": "azureadm"
+            }
         }
     },
     "jumpboxes": {

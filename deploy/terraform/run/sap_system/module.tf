@@ -42,6 +42,7 @@ module "common_infrastructure" {
   vnet-mgmt           = module.deployer.vnet-mgmt
   subnet-mgmt         = module.deployer.subnet-mgmt
   nsg-mgmt            = module.deployer.nsg-mgmt
+  deployer-uai        = module.deployer.deployer-uai
 }
 
 // Create Jumpboxes

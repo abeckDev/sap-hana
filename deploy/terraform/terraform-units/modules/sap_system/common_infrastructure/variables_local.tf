@@ -19,6 +19,10 @@ variable "nsg-mgmt" {
   description = "Details about management nsg of deployer(s)"
 }
 
+variable "deployer-uai" {
+  description = "Details of the UAI used by deployer(s)"
+}
+
 variable "region_mapping" {
   type        = map(string)
   description = "Region Mapping: Full = Single CHAR, 4-CHAR"
@@ -102,6 +106,14 @@ locals {
   ppg_arm_id = local.ppg_exists ? try(local.var_ppg.arm_id, "") : ""
   ppg_name   = local.ppg_exists ? try(split("/", local.ppg_arm_id)[8], "") : try(local.var_ppg.name, format("%s_ppg", local.prefix))
 
+  // Post fix for all deployed resources
+  postfix = random_id.saplandscape.hex
+
+  // kv for sap landscape
+  kv_prefix       = upper(format("%s%s%s", substr(local.environment, 0, 5), local.location_short, substr(local.vnet_sap_name_prefix, 0, 7)))
+  kv_private_name = format("%sprvt%s", local.kv_prefix, upper(substr(local.postfix, 0, 4)))
+  kv_user_name    = format("%suser%s", local.kv_prefix, upper(substr(local.postfix, 0, 4)))
+
   //iSCSI
   var_iscsi = try(local.var_infra.iscsi, {})
 
@@ -124,6 +136,13 @@ locals {
   iscsi_auth_username = try(local.var_iscsi.authentication.username, "azureadm")
   iscsi_nic_ips       = local.sub_iscsi_exists ? try(local.var_iscsi.iscsi_nic_ips, []) : []
 
+  // By default, ssh key for iSCSI uses generated public key. Provide sshkey.path_to_public_key and path_to_private_key overides it
+  iscsi_public_key  = (local.iscsi_count > 0 && local.iscsi_auth_type == "key") ? try(file(var.sshkey.path_to_public_key), tls_private_key.iscsi[0].public_key_openssh) : null
+  iscsi_private_key = (local.iscsi_count > 0 && local.iscsi_auth_type == "key") ? try(file(var.sshkey.path_to_private_key), tls_private_key.iscsi[0].private_key_pem) : null
+
+  // Currently, only Linux VM is used as iSCSI target. The following password of Windows VM is a placeholder for potential future use.
+  iscsi_auth_password = (local.iscsi_count > 0 && local.iscsi_auth_type == "password") ? try(local.var_iscsi.authentication.password, random_password.iscsi_password[0].result) : ""
+
   iscsi = merge(local.var_iscsi, {
     iscsi_count = local.iscsi_count,
     size        = local.iscsi_size,
@@ -145,6 +164,9 @@ locals {
   vnet_sap_name_prefix = local.vnet_nr_parts >= 3 ? split("-", upper(local.vnet_sap_name))[local.vnet_nr_parts - 1] == "VNET" ? split("-", local.vnet_sap_name)[local.vnet_nr_parts - 2] : local.vnet_sap_name : local.vnet_sap_name
   vnet_sap_addr        = local.vnet_sap_exists ? "" : try(local.var_vnet_sap.address_space, "")
 
+  // By default, Ansible ssh key for SID uses generated public key. Provide sshkey.path_to_public_key and path_to_private_key overides it
+  sid_public_key  = try(file(var.sshkey.path_to_public_key), tls_private_key.sid[0].public_key_openssh)
+  sid_private_key = try(file(var.sshkey.path_to_private_key), tls_private_key.sid[0].private_key_pem)
 
   //Admin subnet
   var_sub_admin    = try(local.var_vnet_sap.subnet_admin, {})
