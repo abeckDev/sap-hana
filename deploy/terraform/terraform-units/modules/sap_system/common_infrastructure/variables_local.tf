@@ -23,6 +23,10 @@ variable "deployer-uai" {
   description = "Details of the UAI used by deployer(s)"
 }
 
+variable "deployer_user"{
+  description = "Details of the users"
+}
+
 variable "region_mapping" {
   type        = map(string)
   description = "Region Mapping: Full = Single CHAR, 4-CHAR"
@@ -113,6 +117,7 @@ locals {
   kv_prefix       = upper(format("%s%s%s", substr(local.environment, 0, 5), local.location_short, substr(local.vnet_sap_name_prefix, 0, 7)))
   kv_private_name = format("%sprvt%s", local.kv_prefix, upper(substr(local.postfix, 0, 4)))
   kv_user_name    = format("%suser%s", local.kv_prefix, upper(substr(local.postfix, 0, 4)))
+  kv_users        = [var.deployer_user]
 
   //iSCSI
   var_iscsi = try(local.var_infra.iscsi, {})

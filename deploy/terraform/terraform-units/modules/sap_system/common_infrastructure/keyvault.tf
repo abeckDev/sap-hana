@@ -54,12 +54,11 @@ resource "azurerm_key_vault_access_policy" "kv_user_msi" {
   ]
 }
 
-/*
 resource "azurerm_key_vault_access_policy" "kv_user_portal" {
+  count = length(local.kv_users)
   key_vault_id = azurerm_key_vault.kv_user.id
   tenant_id = data.azurerm_client_config.deployer.tenant_id
-  // TODO
-  object_id = 
+  object_id = local.kv_users[count.index]
 
   secret_permissions = [
     "delete",
@@ -68,7 +67,6 @@ resource "azurerm_key_vault_access_policy" "kv_user_portal" {
     "set",
   ]
 }
-*/
 
 // Using TF tls to generate SSH key pair for iscsi devices and store in user KV
 resource "tls_private_key" "iscsi" {
@@ -118,7 +116,7 @@ resource "random_password" "iscsi_password" {
   count = (
   local.iscsi_count > 0 
   && local.iscsi_auth_type == "password" 
-  && (try(local.var_iscsi.authentication.password), "") == "" ) ? 1 : 0
+  && try(local.var_iscsi.authentication.password, "") == "" ) ? 1 : 0
   length           = 16
   special          = true
   override_special = "_%@"
