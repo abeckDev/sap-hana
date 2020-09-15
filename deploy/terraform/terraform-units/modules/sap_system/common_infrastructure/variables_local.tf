@@ -124,10 +124,7 @@ locals {
 
   //iSCSI target device(s) is only created when below conditions met:
   //- iscsi is defined in input JSON
-  //- AND
-  //  - HANA database has high_availability set to true
-  //  - HANA database uses SUSE
-  iscsi_count = (local.hdb_ha && upper(local.hdb_os.publisher) == "SUSE") ? try(local.var_iscsi.iscsi_count, 0) : 0
+  iscsi_count = try(local.var_iscsi.iscsi_count, 0)
 
   iscsi_size = try(local.var_iscsi.size, "Standard_D2s_v3")
   iscsi_os = try(local.var_iscsi.os,
