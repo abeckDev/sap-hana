@@ -96,7 +96,7 @@ resource "azurerm_linux_virtual_machine" "iscsi" {
 
   admin_ssh_key {
     username   = local.iscsi.authentication.username
-    public_key = file(var.sshkey.path_to_public_key)
+    public_key = local.iscsi_public_key
   }
 
   boot_diagnostics {
